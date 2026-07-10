@@ -20,6 +20,10 @@ UNSUPPORTED_PATTERNS = [
     (re.compile(r"\btypeof\b"), "typeof"),
 ]
 
+SKIP_FUNCTIONS = {
+    "MPI_Pcontrol",
+    "PMPI_Pcontrol",
+}
 
 ##############################################################################
 # Helpers
@@ -122,6 +126,8 @@ def verify(functions):
     check_duplicates(functions)
 
     for function in functions:
+        if function.name in SKIP_FUNCTIONS:
+            continue
 
         check_name(function)
 

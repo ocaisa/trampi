@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import subprocess
 import re
 
-from tokenizer import parse_prototype, extract_identifier
+from .tokenizer import parse_prototype, extract_identifier
 
 ##############################################################################
 # Model
@@ -86,22 +86,28 @@ def read_prototypes(filename):
 
         for line in f:
 
-            #
+            stripped = line.strip()
+
+            # Skip blank lines.
+            if not stripped:
+                continue
+
             # Skip comments.
-            #
-            if line.strip().startswith("/*"):
+            if stripped.startswith("/*"):
+                continue
+
+            # Skip preprocessor directives.
+            if stripped.startswith("#"):
                 continue
 
             if not collecting:
 
-                if "MPI_" not in line and "PMPI_" not in line:
+                # Only start collecting if this line contains the
+                # beginning of an MPI/PMPI function declaration.
+                if not re.search(r"\b(?:MPI_|PMPI_)\w+\s*\(", line):
                     continue
-
-                if "(" not in line:
-                    continue
-
                 collecting = True
-                current = [line.rstrip()]
+                current = [stripped]
 
                 if ";" in line:
 
@@ -111,7 +117,7 @@ def read_prototypes(filename):
 
             else:
 
-                current.append(line.rstrip())
+                current.append(stripped)
 
                 if ";" in line:
 

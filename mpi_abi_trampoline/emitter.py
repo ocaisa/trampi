@@ -1,4 +1,5 @@
 from pathlib import Path
+from .verify import SKIP_FUNCTIONS
 
 
 def emit_header(out):
@@ -15,8 +16,14 @@ def emit_header(out):
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include <mpi.h>
+
+/* Fallback definition if DEFAULT_MPI_ABI_LIBRARY is not provided at compile time */
+#ifndef DEFAULT_MPI_ABI_LIBRARY
+#define DEFAULT_MPI_ABI_LIBRARY NULL
+#endif
 
 """)
 
@@ -58,10 +65,16 @@ init_proxy(void)
     void *symbol;
 
     const char *lib =
-        getenv("MPI_ABI_STUBS_LIBRARY");
+        getenv("MPI_ABI_LIBRARY");
 
     if (!lib)
-        lib = DEFAULT_MPI_LIB;
+        lib = DEFAULT_MPI_ABI_LIBRARY;
+              
+    if (!lib) {
+        fprintf(stderr,
+                "No MPI backend library specified, set environment variable MPI_ABI_LIBRARY to an ABI standard library.\\n");
+        exit(EXIT_FAILURE);
+    }
 
     handle = dlopen(lib, RTLD_NOW | RTLD_GLOBAL);
 
@@ -90,6 +103,18 @@ def emit_wrappers(out, functions):
     out.write("/* Wrappers */\n\n")
 
     for fn in functions:
+
+        # Handle the special case for variadic arguments
+        if fn.name in SKIP_FUNCTIONS:
+            out.write(f"""{fn.return_type} {fn.name}(const int level, ...)
+{{
+    fprintf(stderr,
+            "{fn.name}: cannot automatically forward variadic arguments\\n");
+    return MPI_SUCCESS;
+}}
+
+""")
+            continue
 
         args = ", ".join(p.declaration for p in fn.parameters)
 

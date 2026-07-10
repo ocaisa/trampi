@@ -9,6 +9,7 @@ It only understands the very regular code emitted by emit.py.
 """
 
 import re
+from .verify import SKIP_FUNCTIONS
 
 ##############################################################################
 # Patterns
@@ -145,9 +146,9 @@ def verify(functions, filename):
     for function in functions:
 
         #
-        # Skip MPI_Pcontrol if you intentionally stub it.
+        # Skip specific problematic functions.
         #
-        if function.name in ("MPI_Pcontrol", "PMPI_Pcontrol"):
+        if function.name in SKIP_FUNCTIONS:
 
             continue
 

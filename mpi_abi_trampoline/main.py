@@ -7,10 +7,10 @@ Generate mpi_proxy.c from an MPI header.
 import argparse
 import sys
 
-from mpi_parser import parse_header
-from verify import verify
-from emitter import emit
-from verify_output import verify as verify_output
+from .mpi_parser import parse_header
+from .verify import verify
+from .emitter import emit
+from .verify_output import verify as verify_output
 
 
 def main():
