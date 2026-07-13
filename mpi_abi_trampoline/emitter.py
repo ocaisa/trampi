@@ -1,162 +1,223 @@
+import subprocess
+import re
 from pathlib import Path
 from .verify import SKIP_FUNCTIONS
 
 
-def emit_header(out):
+def read_mpi_stubs(source):
+    """
+    Return mpistubs.c as a list of lines.
 
-    out.write("""\
-/*
- * Auto-generated.
- * DO NOT EDIT.
- */
+    The file is read verbatim.
+    """
 
-#define _GNU_SOURCE
+    with open(source, encoding="utf8") as f:
+        return f.readlines()
 
-#include <stdio.h>
-#include <stdlib.h>
+
+def inject_runtime_support(out, functions):
+    out.write("""
 #include <dlfcn.h>
-#include <stdarg.h>
-#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-#include <mpi.h>
-
-/* Fallback definition if DEFAULT_MPI_ABI_LIBRARY is not provided at compile time */
 #ifndef DEFAULT_MPI_ABI_LIBRARY
 #define DEFAULT_MPI_ABI_LIBRARY NULL
 #endif
 
 """)
 
-
-def emit_typedefs(out, functions):
-
-    out.write("/* Function pointer typedefs */\n\n")
-
+    #
+    # Typedefs
+    #
     for fn in functions:
-
-        args = ", ".join(p.declaration for p in fn.parameters)
-
-        if not args:
-            args = "void"
-
-        out.write(f"typedef {fn.return_type} " f"(*fn_{fn.name}_t)" f"({args});\n")
+        params = ", ".join(p.declaration for p in fn.parameters) or "void"
+        out.write(f"typedef {fn.return_type} " f"(*fn_{fn.name}_t)({params});\n")
 
     out.write("\n")
 
-
-def emit_backend_storage(out, functions):
-
-    out.write("/* Backend storage */\n\n")
-
+    #
+    # Backend pointers
+    #
     for fn in functions:
+        out.write(f"static fn_{fn.name}_t backend_{fn.name} = NULL;\n")
 
-        out.write(f"static fn_{fn.name}_t " f"backend_{fn.name} = NULL;\n")
+    out.write(r"""
 
-    out.write("\n")
-
-
-def emit_constructor(out, functions):
-
-    out.write("""\
 static void __attribute__((constructor))
-init_proxy(void)
+init_mpi_proxy(void)
 {
+    const char *lib;
+    const char *verbose;
     void *handle;
-    void *symbol;
+    void *sym;
+    int missing_symbols = 0;
 
-    const char *lib =
-        getenv("MPI_ABI_LIBRARY");
+    verbose = getenv("MPI_ABI_LIBRARY_VERBOSE");
+    lib = getenv("MPI_ABI_LIBRARY");
 
     if (!lib)
         lib = DEFAULT_MPI_ABI_LIBRARY;
-              
+
+
     if (!lib) {
         fprintf(stderr,
-                "No MPI backend library specified, set environment variable MPI_ABI_LIBRARY to an ABI standard library.\\n");
-        exit(EXIT_FAILURE);
+            "No MPI backend configured. Please set the environment variable MPI_ABI_LIBRARY to an MPI ABI-compliant library\n");
+        abort();
     }
 
     handle = dlopen(lib, RTLD_NOW | RTLD_GLOBAL);
 
     if (!handle) {
-
         fprintf(stderr,
-                "Unable to load %s\\n",
-                lib);
-
+            "%s\n",
+            dlerror());
         abort();
     }
 
 """)
 
     for fn in functions:
+        out.write(f'    sym = dlsym(handle, "{fn.name}");\n')
+        out.write("    if (!sym) {\n")
+        out.write("        if (verbose)\n")
+        out.write(f'            fprintf(stderr, "Unable to resolve {fn.name}\\n");\n')
+        out.write("        ++missing_symbols;\n")
+        out.write("    }\n")
+        out.write(f"    *(void **)(&backend_{fn.name}) = sym;\n")
 
-        out.write(f'    symbol = dlsym(handle, "{fn.name}");\n')
-
-        out.write(f"    memcpy(&backend_{fn.name}," f" &symbol, sizeof(symbol));\n")
-
-    out.write("}\n\n")
-
-
-def emit_wrappers(out, functions):
-
-    out.write("/* Wrappers */\n\n")
-
-    for fn in functions:
-
-        # Handle the special case for variadic arguments
-        if fn.name in SKIP_FUNCTIONS:
-            out.write(f"""{fn.return_type} {fn.name}(const int level, ...)
-{{
-    fprintf(stderr,
-            "{fn.name}: cannot automatically forward variadic arguments\\n");
-    return MPI_SUCCESS;
-}}
+    out.write("""
+    if (missing_symbols && verbose) {
+        fprintf(stderr,
+                "Warning: %d MPI ABI symbols could not be resolved.\\n",
+                missing_symbols);
+    }
+}
 
 """)
+
+
+def rewrite_mpi_stubs(lines, functions):
+    """
+    Rewrite the bodies of MPI/PMPI functions while preserving the rest
+    of mpistubs.c unchanged.
+    """
+
+    lookup = {fn.name: fn for fn in functions}
+
+    pattern = re.compile(r"\b(" + "|".join(re.escape(fn.name) for fn in functions) + r")\s*\(")
+
+    out = []
+
+    i = 0
+
+    while i < len(lines):
+
+        line = lines[i]
+
+        m = pattern.search(line)
+
+        #
+        # Not an MPI function.
+        #
+        if m is None:
+            out.append(line)
+            i += 1
             continue
 
-        args = ", ".join(p.declaration for p in fn.parameters)
+        fn = lookup[m.group(1)]
 
-        if not args:
-            args = "void"
+        #
+        # Copy the signature up to and including the opening brace.
+        #
+        while True:
 
-        call = ", ".join(p.name for p in fn.parameters if p.name)
+            line = lines[i]
 
-        out.write(f"{fn.return_type} " f"{fn.name}" f"({args})\n{{\n")
+            if "{" in line:
 
-        if fn.return_type == "void":
+                brace = line.index("{")
 
-            out.write(f"    backend_{fn.name}" f"({call});\n")
+                #
+                # Preserve everything through the opening brace.
+                #
+                out.append(line[: brace + 1] + " ")
+
+                #
+                # One-line function?
+                #
+                if "}" in line[brace + 1 :]:
+                    i += 1
+                    break
+
+                i += 1
+
+                #
+                # Skip the original body.
+                #
+                depth = 1
+
+                while i < len(lines) and depth:
+
+                    depth += lines[i].count("{")
+                    depth -= lines[i].count("}")
+
+                    i += 1
+
+                break
+
+            out.append(line)
+            i += 1
+
+        #
+        # Emit replacement body.
+        #
+        if fn.name in SKIP_FUNCTIONS:
+
+            out.append(
+                f'fprintf(stderr, "{fn.name}: '
+                'cannot automatically forward variadic arguments\\n"); return MPI_SUCCESS; '
+            )
 
         else:
 
-            out.write(f"    return " f"backend_{fn.name}" f"({call});\n")
+            call = ", ".join(p.name for p in fn.parameters if p.name)
 
-        out.write("}\n\n")
+            if fn.return_type == "void":
+                out.append(f"backend_{fn.name}({call}); ")
+            else:
+                out.append(f"return backend_{fn.name}({call}); ")
+
+        #
+        # Close the function.
+        #
+        out.append("}\n")
+
+    return out
 
 
-def emit(functions, output_file):
-    """
-    Emit mpi_proxy.c from a list of Function objects.
+def emit_proxy(*, mpi_stubs, output, functions):
 
-    Parameters
-    ----------
-    functions : list[Function]
-        Parsed and verified MPI functions.
+    lines = read_mpi_stubs(mpi_stubs)
 
-    output_file : str or Path
-        Output C filename.
-    """
+    rewritten = rewrite_mpi_stubs(lines, functions)
 
-    with open(output_file, "w") as out:
+    insert_after = -1
 
-        emit_header(out)
+    for i, line in enumerate(rewritten):
+        if line.lstrip().startswith("#include"):
+            insert_after = i
 
-        emit_typedefs(out, functions)
+    if insert_after == -1:
+        raise RuntimeError("No #include directives found.")
 
-        emit_backend_storage(out, functions)
+    with open(output, "w", encoding="utf8") as out:
 
-        emit_constructor(out, functions)
+        for i, line in enumerate(rewritten):
 
-        emit_wrappers(out, functions)
+            out.write(line)
+
+            if i == insert_after:
+                out.write("\n")
+                inject_runtime_support(out, functions)
+                out.write("\n")

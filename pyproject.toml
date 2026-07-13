@@ -8,9 +8,6 @@ version = "0.1.0"
 description = "Generator for MPI ABI trampoline libraries"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-    "clang-format",
-]
 
 [project.scripts]
 mpi-abi-trampoline = "mpi_abi_trampoline.main:main"

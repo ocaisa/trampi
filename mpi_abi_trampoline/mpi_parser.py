@@ -44,27 +44,6 @@ class Function:
 
 
 ##############################################################################
-# Formatting
-##############################################################################
-
-
-def clang_format(text):
-
-    try:
-
-        p = subprocess.run(["clang-format"], input=text, capture_output=True, text=True, check=True)
-
-        return p.stdout.strip()
-
-    except Exception:
-
-        #
-        # Continue without formatting.
-        #
-        return text.strip()
-
-
-##############################################################################
 # Reading mpi.h
 ##############################################################################
 
@@ -139,7 +118,7 @@ def parse_header(filename):
 
     for prototype in read_prototypes(filename):
 
-        prototype = clang_format(prototype)
+        prototype = prototype.strip()
 
         try:
 

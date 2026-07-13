@@ -5,217 +5,181 @@ Verify a generated mpi_proxy.c.
 
 This does NOT parse arbitrary C.
 
-It only understands the very regular code emitted by emit.py.
+It only understands the very regular code emitted by emitter.py.
 """
 
 import re
 from .verify import SKIP_FUNCTIONS
 
-##############################################################################
-# Patterns
-##############################################################################
-
-TYPEDEF_RE = re.compile(r"^typedef\b.*\(\*fn_(\w+)_t\)\(")
-
-BACKEND_RE = re.compile(r"^static\s+fn_(\w+)_t\s+backend_(\w+)\s*=")
-
-DLSYM_RE = re.compile(r'dlsym\(.*?"(\w+)"')
-
-WRAPPER_RE = re.compile(r"^(?:int|void|double|MPI_\w+)\s+((?:P?MPI_\w+))\(")
-
-CALL_RE = re.compile(r"backend_(\w+)\((.*?)\)")
+NAME_RE = re.compile(r"^\s*.*?\b((?:MPI|PMPI)_\w+)\s*\(")
+CALL_RE = re.compile(r"\bbackend_(\w+)\((.*?)\)")
 
 
-##############################################################################
-# Index
-##############################################################################
+def make_wrapper_pattern(functions):
+
+    names = sorted(
+        (re.escape(fn.name) for fn in functions),
+        key=len,
+        reverse=True,
+    )
+
+    return re.compile(r"\b(" + "|".join(names) + r")\s*\(")
 
 
-class OutputIndex:
+def make_backend_pattern(functions):
 
-    def __init__(self):
+    names = sorted(
+        (re.escape(fn.name) for fn in functions),
+        key=len,
+        reverse=True,
+    )
 
-        self.typedefs = {}
-
-        self.backends = {}
-
-        self.dlsyms = {}
-
-        self.wrappers = {}
-
-        self.calls = {}
-
-
-##############################################################################
-# Scanner
-##############################################################################
+    return re.compile(
+        r"\bbackend_(" + "|".join(names) + r")\s*\((.*?)\)",
+        re.DOTALL,
+    )
 
 
-def scan(filename):
+def scan_wrappers(filename, functions):
 
-    index = OutputIndex()
+    wrappers = {}
 
-    current_wrapper = None
+    current = None
+    depth = 0
+
+    wrapper_re = make_wrapper_pattern(functions)
+    backend_re = make_backend_pattern(functions)
 
     with open(filename, encoding="utf8") as f:
 
         for line in f:
 
-            line = line.strip()
-
             #
-            # typedef
+            # Outside a function.
             #
-            m = TYPEDEF_RE.match(line)
+            if current is None:
 
-            if m:
+                m = wrapper_re.search(line)
 
-                index.typedefs[m.group(1)] = True
+                if not m:
+                    continue
 
-                continue
+                current = m.group(1)
 
-            #
-            # backend variable
-            #
-            m = BACKEND_RE.match(line)
+                wrappers[current] = {
+                    "call": None,
+                    "args": [],
+                }
 
-            if m:
-
-                if m.group(1) != m.group(2):
-
-                    raise RuntimeError("Backend typedef mismatch")
-
-                index.backends[m.group(1)] = True
-
-                continue
-
-            #
-            # dlsym
-            #
-            m = DLSYM_RE.search(line)
-
-            if m:
-
-                index.dlsyms[m.group(1)] = True
-
-                continue
-
-            #
-            # wrapper
-            #
-            m = WRAPPER_RE.match(line)
-
-            if m:
-
-                current_wrapper = m.group(1)
-
-                index.wrappers[current_wrapper] = True
-
-                continue
-
-            #
-            # backend call
-            #
-            if current_wrapper:
-
-                m = CALL_RE.search(line)
+                #
+                # Backend call on the same line?
+                #
+                m = backend_re.search(line)
 
                 if m:
 
-                    index.calls[current_wrapper] = (m.group(1), m.group(2))
+                    wrappers[current]["call"] = m.group(1)
 
-    return index
+                    wrappers[current]["args"] = [x.strip() for x in m.group(2).split(",") if x.strip()]
+
+                depth += line.count("{")
+                depth -= line.count("}")
+
+                if depth == 0:
+                    current = None
+
+                continue
+
+            #
+            # Inside a function.
+            #
+            depth += line.count("{")
+            depth -= line.count("}")
+
+            m = backend_re.search(line)
+
+            if m:
+
+                wrappers[current]["call"] = m.group(1)
+
+                wrappers[current]["args"] = [x.strip() for x in m.group(2).split(",") if x.strip()]
+
+            if depth == 0:
+                current = None
+
+    return wrappers
 
 
-##############################################################################
-# Verification
-##############################################################################
+def verify_output(*, functions, mpi_stubs, mpi_proxy):
 
-
-def verify(functions, filename):
-
-    index = scan(filename)
+    reference = scan_wrappers(mpi_stubs, functions)
+    generated = scan_wrappers(mpi_proxy, functions)
 
     errors = 0
 
     print()
-
     print("Output verification")
     print("-------------------")
 
-    for function in functions:
+    #
+    # Compare wrapper sets.
+    #
+    missing = sorted(set(reference) - set(generated))
 
-        #
-        # Skip specific problematic functions.
-        #
-        if function.name in SKIP_FUNCTIONS:
+    for name in missing:
+        print("Missing wrapper:", name)
+        errors += 1
 
+    extra = sorted(set(generated) - set(reference))
+
+    for name in extra:
+        print("Unexpected wrapper:", name)
+        errors += 1
+
+    #
+    # Compare generated wrappers against the parsed MPI API.
+    #
+    for fn in functions:
+
+        if fn.name in SKIP_FUNCTIONS:
             continue
 
-        name = function.name
-
-        if name not in index.typedefs:
-
-            print("Missing typedef:", name)
-
-            errors += 1
-
-        if name not in index.backends:
-
-            print("Missing backend:", name)
-
-            errors += 1
-
-        if name not in index.dlsyms:
-
-            print("Missing dlsym:", name)
-
-            errors += 1
-
-        if name not in index.wrappers:
-
-            print("Missing wrapper:", name)
-
-            errors += 1
-
-        if name not in index.calls:
-
-            print("Missing backend call:", name)
-
-            errors += 1
-
+        if fn.name not in generated:
             continue
 
-        backend_name, call = index.calls[name]
+        wrapper = generated[fn.name]
 
-        if backend_name != name:
+        #
+        # Backend call.
+        #
+        if wrapper["call"] != fn.name:
 
-            print(f"Wrong backend: " f"{name} -> {backend_name}")
+            print(f"Wrong backend: " f"{fn.name} -> {wrapper['call']}")
 
             errors += 1
 
-        expected = [p.name for p in function.parameters if p.name]
+        #
+        # Arguments.
+        #
+        expected = [p.name for p in fn.parameters if p.name]
 
-        actual = [x.strip() for x in call.split(",") if x.strip()]
-
-        if expected != actual:
+        if wrapper["args"] != expected:
 
             print()
-
-            print(name)
-
+            print(fn.name)
             print(" expected:", expected)
-
-            print(" actual:  ", actual)
+            print(" actual:  ", wrapper["args"])
 
             errors += 1
 
     print()
 
     if errors:
-
+        print(f"Reference wrappers : {len(reference)}")
+        print(f"Generated wrappers : {len(generated)}")
+        print()
         raise RuntimeError(f"{errors} verification errors")
 
-    print(f"Verified {len(functions)} wrappers.")
+    print(f"Verified {len(reference)} wrappers ({len(SKIP_FUNCTIONS)} of these checks were skipped though).")
 
     return True
