@@ -1,3 +1,6 @@
 [submodule "mpi-abi-stubs"]
 	path = mpi-abi-stubs
 	url = https://github.com/mpi-forum/mpi-abi-stubs.git
+[submodule "mpif"]
+	path = mpif
+	url = https://github.com/eschnett/mpif.git

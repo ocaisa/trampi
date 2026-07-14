@@ -20,7 +20,7 @@ UNSUPPORTED_PATTERNS = [
     (re.compile(r"\btypeof\b"), "typeof"),
 ]
 
-SKIP_FUNCTIONS = {
+VARIADIC_FUNCTIONS = {
     "MPI_Pcontrol",
     "PMPI_Pcontrol",
 }
@@ -126,7 +126,8 @@ def verify(functions):
     check_duplicates(functions)
 
     for function in functions:
-        if function.name in SKIP_FUNCTIONS:
+        if function.name in VARIADIC_FUNCTIONS:
+            print(f"Skipping verification for {function.name} due to variadic arguments")
             continue
 
         check_name(function)

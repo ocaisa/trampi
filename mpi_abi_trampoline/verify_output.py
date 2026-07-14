@@ -9,7 +9,7 @@ It only understands the very regular code emitted by emitter.py.
 """
 
 import re
-from .verify import SKIP_FUNCTIONS
+from .verify import VARIADIC_FUNCTIONS
 
 NAME_RE = re.compile(r"^\s*.*?\b((?:MPI|PMPI)_\w+)\s*\(")
 CALL_RE = re.compile(r"\bbackend_(\w+)\((.*?)\)")
@@ -110,10 +110,10 @@ def scan_wrappers(filename, functions):
     return wrappers
 
 
-def verify_output(*, functions, mpi_stubs, mpi_proxy):
+def verify_output(*, functions, extension_functions, mpi_stubs, mpi_proxy):
 
     reference = scan_wrappers(mpi_stubs, functions)
-    generated = scan_wrappers(mpi_proxy, functions)
+    generated = scan_wrappers(mpi_proxy, functions + extension_functions)
 
     errors = 0
 
@@ -124,13 +124,15 @@ def verify_output(*, functions, mpi_stubs, mpi_proxy):
     #
     # Compare wrapper sets.
     #
-    missing = sorted(set(reference) - set(generated))
+    expected = {fn.name for fn in functions}
+    expected.update(fn.name for fn in extension_functions)
+
+    missing = expected - generated.keys()
+    extra = generated.keys() - expected
 
     for name in missing:
         print("Missing wrapper:", name)
         errors += 1
-
-    extra = sorted(set(generated) - set(reference))
 
     for name in extra:
         print("Unexpected wrapper:", name)
@@ -139,9 +141,9 @@ def verify_output(*, functions, mpi_stubs, mpi_proxy):
     #
     # Compare generated wrappers against the parsed MPI API.
     #
-    for fn in functions:
+    for fn in functions + extension_functions:
 
-        if fn.name in SKIP_FUNCTIONS:
+        if fn.name in VARIADIC_FUNCTIONS:
             continue
 
         if fn.name not in generated:
@@ -180,6 +182,8 @@ def verify_output(*, functions, mpi_stubs, mpi_proxy):
         print()
         raise RuntimeError(f"{errors} verification errors")
 
-    print(f"Verified {len(reference)} wrappers ({len(SKIP_FUNCTIONS)} of these checks were skipped though).")
+    print(f"Reference ABI wrappers : {len(reference)}")
+    print(f"Generated ABI wrappers : {len(generated)}")
+    print(f"Verified {len(generated) - len(VARIADIC_FUNCTIONS)} wrappers ({",".join(VARIADIC_FUNCTIONS)} checks were skipped).")
 
     return True

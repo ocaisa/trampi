@@ -1,7 +1,5 @@
-import subprocess
 import re
-from pathlib import Path
-from .verify import SKIP_FUNCTIONS
+from .verify import VARIADIC_FUNCTIONS
 
 
 def read_mpi_stubs(source):
@@ -15,7 +13,8 @@ def read_mpi_stubs(source):
         return f.readlines()
 
 
-def inject_runtime_support(out, functions):
+def inject_runtime_support(out, base_functions, extension_functions):
+    all_functions = base_functions + extension_functions
     out.write("""
 #include <dlfcn.h>
 #include <stdlib.h>
@@ -30,7 +29,7 @@ def inject_runtime_support(out, functions):
     #
     # Typedefs
     #
-    for fn in functions:
+    for fn in all_functions:
         params = ", ".join(p.declaration for p in fn.parameters) or "void"
         out.write(f"typedef {fn.return_type} " f"(*fn_{fn.name}_t)({params});\n")
 
@@ -39,7 +38,7 @@ def inject_runtime_support(out, functions):
     #
     # Backend pointers
     #
-    for fn in functions:
+    for fn in all_functions:
         out.write(f"static fn_{fn.name}_t backend_{fn.name} = NULL;\n")
 
     out.write(r"""
@@ -52,6 +51,7 @@ init_mpi_proxy(void)
     void *handle;
     void *sym;
     int missing_symbols = 0;
+    int missing_ext_symbols = 0;
 
     verbose = getenv("MPI_ABI_LIBRARY_VERBOSE");
     lib = getenv("MPI_ABI_LIBRARY");
@@ -77,7 +77,7 @@ init_mpi_proxy(void)
 
 """)
 
-    for fn in functions:
+    for fn in base_functions:
         out.write(f'    sym = dlsym(handle, "{fn.name}");\n')
         out.write("    if (!sym) {\n")
         out.write("        if (verbose)\n")
@@ -85,16 +85,73 @@ init_mpi_proxy(void)
         out.write("        ++missing_symbols;\n")
         out.write("    }\n")
         out.write(f"    *(void **)(&backend_{fn.name}) = sym;\n")
+    out.write("\n")
+    for fn in extension_functions:
+        out.write(f'    sym = dlsym(handle, "{fn.name}");\n')
+        out.write("    if (!sym) {\n")
+        out.write("        if (verbose)\n")
+        out.write(
+            f'            fprintf(stderr, '
+            f'"Optional MPI ABI extension not available in runtime: {fn.name}\\n");\n'
+        )
+        out.write("        ++missing_ext_symbols;\n")
+        out.write("    }\n")
+        out.write(f"    *(void **)(&backend_{fn.name}) = sym;\n")
 
     out.write("""
     if (missing_symbols && verbose) {
+    fprintf(stderr,
+            "Warning: %d required MPI ABI symbols could not be resolved. "
+            "Calls to these functions will fail.\\n",
+            missing_symbols);
+    }
+
+    if (missing_ext_symbols && verbose) {
         fprintf(stderr,
-                "Warning: %d MPI ABI symbols could not be resolved.\\n",
-                missing_symbols);
+                "Warning: %d optional MPI ABI extension symbols could not be resolved. "
+                "This runtime is not patched for these (optional) MPI ABI extensions. "
+                "Calls to these functions will fail.\\n",
+                missing_ext_symbols);
     }
 }
 
 """)
+
+
+def wrapper_body(fn):
+
+    if fn.name in VARIADIC_FUNCTIONS:
+
+        return (
+            f'fprintf(stderr, "{fn.name}: '
+            'cannot automatically forward variadic arguments\\n"); '
+            "return MPI_SUCCESS; "
+        )
+
+    call = ", ".join(
+        p.name for p in fn.parameters if p.name
+    )
+
+    if fn.return_type == "void":
+        return f"backend_{fn.name}({call}); "
+
+    return f"return backend_{fn.name}({call}); "
+
+
+def emit_wrapper(out, fn):
+
+    params = ", ".join(
+        p.declaration for p in fn.parameters
+    ) or "void"
+
+    out.write(
+        f"{fn.return_type} {fn.name}({params}) "
+    )
+    out.write("{ ")
+
+    out.write(wrapper_body(fn))
+
+    out.write("}\n")
 
 
 def rewrite_mpi_stubs(lines, functions):
@@ -172,21 +229,7 @@ def rewrite_mpi_stubs(lines, functions):
         #
         # Emit replacement body.
         #
-        if fn.name in SKIP_FUNCTIONS:
-
-            out.append(
-                f'fprintf(stderr, "{fn.name}: '
-                'cannot automatically forward variadic arguments\\n"); return MPI_SUCCESS; '
-            )
-
-        else:
-
-            call = ", ".join(p.name for p in fn.parameters if p.name)
-
-            if fn.return_type == "void":
-                out.append(f"backend_{fn.name}({call}); ")
-            else:
-                out.append(f"return backend_{fn.name}({call}); ")
+        out.append(wrapper_body(fn))
 
         #
         # Close the function.
@@ -196,7 +239,13 @@ def rewrite_mpi_stubs(lines, functions):
     return out
 
 
-def emit_proxy(*, mpi_stubs, output, functions):
+def emit_proxy(
+    *,
+    functions,
+    extension_functions,
+    mpi_stubs,
+    output,
+):
 
     lines = read_mpi_stubs(mpi_stubs)
 
@@ -219,5 +268,23 @@ def emit_proxy(*, mpi_stubs, output, functions):
 
             if i == insert_after:
                 out.write("\n")
-                inject_runtime_support(out, functions)
+                inject_runtime_support(out, functions, extension_functions)
+                out.write("\n")
+
+        #
+        # Emit wrappers that are not yet present in mpistubs.c.
+        #
+        if extension_functions:
+
+            out.write("""
+
+/*
+ * Additional wrappers from mpi.h.patch.
+ */
+
+"""
+            )
+
+            for fn in extension_functions:
+                emit_wrapper(out, fn)
                 out.write("\n")

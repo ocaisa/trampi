@@ -6,11 +6,49 @@ Generate mpi_proxy.c from an MPI header.
 
 import argparse
 import sys
+import re
 
-from .mpi_parser import parse_header
+from pathlib import Path
+from .mpi_parser import parse_header, parse_header_patch
 from .verify import verify
 from .emitter import emit_proxy
 from .verify_output import verify_output
+
+
+def verify_header_patch(filename):
+    """
+    Verify that filename is a unified diff affecting only mpi.h.
+    """
+
+    filename = Path(filename)
+
+    if not filename.is_file():
+        raise RuntimeError(f"Patch file not found: {filename}")
+
+    old = None
+    new = None
+
+    with filename.open(encoding="utf8") as f:
+
+        for line in f:
+
+            if line.startswith("--- "):
+                old = line[4:].strip()
+
+            elif line.startswith("+++ "):
+                new = line[4:].strip()
+
+    if old is None or new is None:
+        raise RuntimeError("Not a unified diff.")
+
+    def basename(path):
+        path = path.split("\t", 1)[0]
+        return Path(path).name
+
+    if basename(old) != "mpi.h" or basename(new) != "mpi.h":
+        raise RuntimeError(
+            "Header patch must modify only mpi.h."
+        )
 
 
 def main():
@@ -21,6 +59,12 @@ def main():
         "--header",
         required=True,
         help="Path to mpi.h",
+    )
+
+    parser.add_argument(
+        "--header-patch",
+        required=False,
+        help="Path to patch for mpi.h which _only_ adds additional decalarations (e.g, for Fortran)",
     )
 
     parser.add_argument(
@@ -45,14 +89,22 @@ def main():
     args = parser.parse_args()
 
     print(f"Reading {args.header}")
-    print(f"Reading {args.stubs}")
-
     functions = parse_header(args.header)
 
-    verify(functions)
+    extension_functions = []
+    if args.header_patch:
+        verify_header_patch(args.header_patch)
+        print(f"Reading {args.header_patch}")
+        extension_functions = parse_header_patch(args.header_patch)
+
+    all_functions = functions + extension_functions
+    verify(all_functions)
+
+    print(f"Reading {args.stubs}")
 
     emit_proxy(
         functions=functions,
+        extension_functions=extension_functions,
         mpi_stubs=args.stubs,
         output=args.output,
     )
@@ -60,7 +112,7 @@ def main():
     print(f"Wrote {args.output}")
 
     if not args.no_verify_output:
-        verify_output(functions=functions, mpi_stubs=args.stubs, mpi_proxy=args.output)
+        verify_output(functions=functions, extension_functions=extension_functions, mpi_stubs=args.stubs, mpi_proxy=args.output)
 
     print("Done.")
 
