@@ -1,6 +1,6 @@
-# MPI ABI Trampoline
+# `trampi`
 
-`mpi-abi-trampoline` generates a trampoline implementation of the MPI ABI from an `mpi.h` header file and an `mpistubs.c` file (which are expected to come from the [`mpi-abi-stubs` reference for the MPI standard ABI](https://github.com/mpi-forum/mpi-abi-stubs)). The generated `mpi_proxy.c` forwards all supported MPI and PMPI entry points to a backend MPI library that is selected at runtime. The library also relies on `mpi-abi-stubs` to provide a build system.
+`trampi` generates a trampoline implementation of the MPI ABI from an `mpi.h` header file and an `mpistubs.c` file (which are expected to come from the [`mpi-abi-stubs` reference for the MPI standard ABI](https://github.com/mpi-forum/mpi-abi-stubs)). It also has (optional) support for [`mpif`](https://github.com/eschnett/mpif). The generated `mpi_proxy.c` (and potentially a patched `mpi.h` if using `mpif`) forwards all supported MPI and PMPI entry points to a backend MPI library that is selected at runtime. The library relies on `mpi-abi-stubs` to provide a build system.
 
 ## Installation
 
@@ -10,20 +10,20 @@ Create and activate a Python virtual environment, then install the generator:
 pip install -e .
 ```
 
-This installs the `mpi-abi-trampoline` command-line tool.
+This installs the `trampi` command-line tool.
 
 ## Generating the trampoline
 
 Run the generator against the MPI ABI header and stub. For example:
 
 ```bash
-mpi-abi-trampoline --header mpi-abi-stubs/mpi.h --stubs mpi-abi-stubs/mpistubs.c
+trampi --header mpi-abi-stubs/mpi.h --stubs mpi-abi-stubs/mpistubs.c
 ```
 
 The generator will:
 
 * Parse and verify all MPI and PMPI declarations.
-* Generate `mpi_proxy.c`.
+* Generate `mpi_proxy.c` (and a patched `mpi.h` if using `mpif`).
 * Verify that every parsed function has a corresponding wrapper.
 
 A successful run reports the number of verified wrappers and writes `mpi_proxy.c` into the current directory.
@@ -44,14 +44,15 @@ Then build the trampoline implementation by overriding the source file:
 
 ```bash
 ln -s ../mpi_proxy.c  # Make a symlink to our generated code
-make SOURCE_C=mpi_proxy.c
+make SOURCE_C=/path/to/mpi_proxy.c SOURCE_H=/path/to/mpi.h
 ```
+(`SORUCE_H` is only required if using `mpif`)
 
-A similar source override mechanism is supported by the CMake (`-DSOURCE_C=mpi_proxy.c`) and Meson (`-Dsource_c=mpi_proxy.c`) build systems.
+A similar source override mechanism is supported by the CMake (`-DSOURCE_C=/path/to/mpi_proxy.c`, `-DSOURCE_H=/path/to/mpi.h`) and Meson (`-Dsource_c=mpi_proxy.c`, `-Dsource_h=mpi.h`) build systems.
 
 ## Output
 
-The resulting shared library exports the same MPI/PMPI interface as the reference `mpi-abi-stubs` implementation while dispatching calls to a backend MPI library at runtime.
+The resulting shared library exports the same MPI/PMPI interface as the reference `mpi-abi-stubs` implementation (plus `mpif` if using this) while dispatching calls to a backend MPI library at runtime. When using the backend library you can use the environment variable `MPI_ABI_LIBRARY_VERBOSE` to inspect any missing symbols from there (these will only fail if they are actually used by the application).
 
 ## Selecting the backend MPI library
 
