@@ -184,6 +184,8 @@ def verify_output(*, functions, extension_functions, mpi_stubs, mpi_proxy):
 
     print(f"Reference ABI wrappers : {len(reference)}")
     print(f"Generated ABI wrappers : {len(generated)}")
-    print(f"Verified {len(generated) - len(VARIADIC_FUNCTIONS)} wrappers ({",".join(VARIADIC_FUNCTIONS)} checks were skipped).")
+    print(
+        f"Verified {len(generated) - len(VARIADIC_FUNCTIONS)} wrappers ({",".join(VARIADIC_FUNCTIONS)} checks were skipped)."
+    )
 
     return True

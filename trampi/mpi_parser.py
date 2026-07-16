@@ -175,13 +175,9 @@ def parse_prototypes(prototypes):
 
 def parse_header(filename):
 
-    return parse_prototypes(
-        read_header_prototypes(filename)
-    )
+    return parse_prototypes(read_header_prototypes(filename))
 
 
 def parse_header_patch(filename):
 
-    return parse_prototypes(
-        read_patch_prototypes(filename)
-    )
+    return parse_prototypes(read_patch_prototypes(filename))

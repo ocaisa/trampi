@@ -46,9 +46,7 @@ def verify_header_patch(filename):
         return Path(path).name
 
     if basename(old) != "mpi.h" or basename(new) != "mpi.h":
-        raise RuntimeError(
-            "Header patch must modify only mpi.h."
-        )
+        raise RuntimeError("Header patch must modify only mpi.h.")
 
 
 def main():
@@ -112,7 +110,12 @@ def main():
     print(f"Wrote {args.output}")
 
     if not args.no_verify_output:
-        verify_output(functions=functions, extension_functions=extension_functions, mpi_stubs=args.stubs, mpi_proxy=args.output)
+        verify_output(
+            functions=functions,
+            extension_functions=extension_functions,
+            mpi_stubs=args.stubs,
+            mpi_proxy=args.output,
+        )
 
     print("Done.")
 

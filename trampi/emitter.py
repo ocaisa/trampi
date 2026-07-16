@@ -91,8 +91,7 @@ init_mpi_proxy(void)
         out.write("    if (!sym) {\n")
         out.write("        if (verbose)\n")
         out.write(
-            f'            fprintf(stderr, '
-            f'"Optional MPI ABI extension not available in runtime: {fn.name}\\n");\n'
+            f"            fprintf(stderr, " f'"Optional MPI ABI extension not available in runtime: {fn.name}\\n");\n'
         )
         out.write("        ++missing_ext_symbols;\n")
         out.write("    }\n")
@@ -128,9 +127,7 @@ def wrapper_body(fn):
             "return MPI_SUCCESS; "
         )
 
-    call = ", ".join(
-        p.name for p in fn.parameters if p.name
-    )
+    call = ", ".join(p.name for p in fn.parameters if p.name)
 
     if fn.return_type == "void":
         return f"backend_{fn.name}({call}); "
@@ -140,13 +137,9 @@ def wrapper_body(fn):
 
 def emit_wrapper(out, fn):
 
-    params = ", ".join(
-        p.declaration for p in fn.parameters
-    ) or "void"
+    params = ", ".join(p.declaration for p in fn.parameters) or "void"
 
-    out.write(
-        f"{fn.return_type} {fn.name}({params}) "
-    )
+    out.write(f"{fn.return_type} {fn.name}({params}) ")
     out.write("{ ")
 
     out.write(wrapper_body(fn))
@@ -282,8 +275,7 @@ def emit_proxy(
  * Additional wrappers from mpi.h.patch.
  */
 
-"""
-            )
+""")
 
             for fn in extension_functions:
                 emit_wrapper(out, fn)
