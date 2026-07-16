@@ -3,14 +3,14 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mpi-abi-trampoline"
+name = "trampi"
 version = "0.1.0"
 description = "Generator for MPI ABI trampoline libraries"
 readme = "README.md"
 requires-python = ">=3.10"
 
 [project.scripts]
-mpi-abi-trampoline = "mpi_abi_trampoline.main:main"
+trampi = "trampi.main:main"
 
 [tool.setuptools.packages.find]
 include = ["mpi_abi_trampoline*"]
