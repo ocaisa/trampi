@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 [project.scripts]
-trampi = "trampi.main:main"
+trampi = "trampi.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["mpi_abi_trampoline*"]
+include = ["trampi*"]

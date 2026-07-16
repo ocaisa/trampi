@@ -5,8 +5,12 @@ Generate mpi_proxy.c from an MPI header.
 """
 
 import argparse
+import os
+import shutil
+import stat
+import subprocess
 import sys
-import re
+
 
 from pathlib import Path
 from .mpi_parser import parse_header, parse_header_patch
@@ -47,6 +51,35 @@ def verify_header_patch(filename):
 
     if basename(old) != "mpi.h" or basename(new) != "mpi.h":
         raise RuntimeError("Header patch must modify only mpi.h.")
+
+
+def apply_header_patch(header, header_patch, output_header):
+    """Copy `header` to `output_header` and apply `header_patch` to it."""
+
+    if shutil.which("patch") is None:
+        raise RuntimeError(
+            "The 'patch' command was not found. Please install it and ensure it is available on your PATH."
+        )
+
+    output_header = Path(output_header)
+    output_header.parent.mkdir(parents=True, exist_ok=True)
+
+    # Copy the original header.
+    shutil.copy2(header, output_header)
+
+    # Ensure the copied file is writable.
+    mode = output_header.stat().st_mode
+    os.chmod(output_header, mode | stat.S_IWUSR)
+
+    # Apply the patch in-place.
+    subprocess.run(
+        [
+            "patch",
+            str(output_header),
+            str(header_patch),
+        ],
+        check=True,
+    )
 
 
 def main():
@@ -90,10 +123,21 @@ def main():
     functions = parse_header(args.header)
 
     extension_functions = []
+    patch_text = ""
     if args.header_patch:
         verify_header_patch(args.header_patch)
         print(f"Reading {args.header_patch}")
         extension_functions = parse_header_patch(args.header_patch)
+
+        # Place the patched mpi.h alongside the generated mpi_proxy.c
+        output_dir = Path(args.output).resolve().parent
+        patched_header_path = output_dir / "mpi.h"
+        apply_header_patch(
+            args.header,
+            args.header_patch,
+            patched_header_path,
+        )
+        patch_text = f" and {patched_header_path}"
 
     all_functions = functions + extension_functions
     verify(all_functions)
@@ -117,6 +161,7 @@ def main():
             mpi_proxy=args.output,
         )
 
+    print(f"{Path(args.output).resolve()}{patch_text} have been written.")
     print("Done.")
 
 
