@@ -37,7 +37,7 @@ jobs:
       shell: bash
       run: |
         export EESSI_PROJECT_INSTALL="/home/runner/work/mpich/eessi"
-        export EASYBUILD_SOURCES="/home/runner/work/mpich/eessi/sources"
+        export EASYBUILD_SOURCEPATH="/home/runner/work/mpich/eessi/sources"
         mkdir -p $EESSI_PROJECT_INSTALL
         module load EESSI-extend
         cd easybuild
