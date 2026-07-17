@@ -46,9 +46,10 @@ jobs:
         eb --fetch MPICH-5.0.1-GCC-14.3.0.eb
         
         # Then run the two builds in parallel
+        # (with and without mpif)
         eb --robot MPICH-5.0.1-GCC-14.3.0-mpif.eb &
         pid1=$!
-        eb --robot MPICH-5.0.1-GCC-14.3.0.eb &
+        eb --robot MPICH-5.0.1-GCC-14.3.0.eb
         pid2=$!
         wait $pid1
         wait $pid2
@@ -61,8 +62,19 @@ jobs:
         mkdir -p $EESSI_USER_INSTALL
         module load EESSI-extend
         unset EASYBUILD_DEBUG
-        # eb --logtostdout --software-commit=$GITHUB_SHA easybuild/trampi-devel-GCC-14.3.0.eb --software-commit=$GITHUB_SHA
-        # module load trampi
-        # mpicc -show
-        # mpicc test_codes/mpi_hello_world.c
-        # LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpiexec -n 2 ./a.out
+        eb --logtostdout --software-commit=$GITHUB_SHA easybuild/trampi-devel-GCC-14.3.0.eb --software-commit=$GITHUB_SHA
+        echo
+        echo "Check we can load the module:"
+        echo
+        module load trampi
+        module list
+        echo
+        echo "Check the mpicc compiler works:"
+        echo
+        mpicc -show
+        mpicc test_codes/mpi_hello_world.c
+        ldd ./a.out
+        echo
+        echo "Check we can also run things:"
+        echo
+        LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpiexec -n 2 ./a.out
