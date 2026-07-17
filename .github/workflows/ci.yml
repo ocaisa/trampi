@@ -84,3 +84,13 @@ jobs:
         echo "Check we can also run things:"
         echo
         LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpiexec -n 2 ./a.out
+        echo
+        echo "Check the mpifort compiler works:"
+        echo
+        mpifort -show
+        mpifort test_codes/mpi_hello_world.f90
+        ldd ./a.out
+        echo
+        echo "Check we can also run fortran codes:"
+        echo
+        LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpirun -n 2 ./a.out
