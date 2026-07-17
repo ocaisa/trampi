@@ -1,0 +1,54 @@
+name: Build via EESSI and EasyBuild on x86 and Arm
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+on:
+  workflow_dispatch:  # Allows manual triggering
+  push:
+  pull_request:
+    branches:
+      - main
+# Declare default permissions as read only.
+permissions: read-all
+jobs:
+  minimal_usage:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-24.04-arm
+          - ubuntu-24.04
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v6
+    - name: Load EESSI
+      uses: eessi/github-action-eessi@v3
+      with:
+        eessi_stack_version: '2025.06'
+    - name: Cache MPICH/GCC install
+      id: cache-mpich-gcc
+      uses: actions/cache@v5
+      with:
+        path: /home/runner/work/mpich/eessi
+        key: mpich-gcc-${{ runner.os }}-5.0.1-v3
+        restore-keys: |
+          mpich-gcc-${{ runner.os }}-5.0.1-v3
+    - name: Install MPICH
+      shell: bash
+      run: |
+        export EESSI_PROJECT_INSTALL="/home/runner/work/mpich"
+        module load EESSI-extend
+        cd easybuild
+        eb --robot MPICH-5.0.1-GCC-14.3.0-mpif.eb  MPICH-5.0.1-GCC-14.3.0.eb
+    - name: Test trampi via EESSI-extend
+      shell: bash
+      run: |
+        export EESSI_PROJECT_INSTALL="/home/runner/work/mpich"
+        export EESSI_USER_INSTALL="/home/runner/work"
+        module load EESSI-extend
+        unset EASYBUILD_DEBUG
+        eb --logtostdout --software-commit=$GITHUB_SHA easybuild/trampi-devel-GCC-14.3.0.eb --software-commit=$GITHUB_SHA
+        module load trampi
+        mpicc -show
+        mpicc test_codes/mpi_hello_world.c
+        LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpiexec -n 2 ./a.out

@@ -1,0 +1,102 @@
+easyblock = 'Bundle'
+
+name = 'trampi'
+version = '0.1.0-devel'
+versionsuffix = '-%(software_commit)s'
+
+homepage = 'https://github.com/ocaisa/trampi'
+description = """
+A trampoline generator for the MPI 5.0 ABI which generates an MPI 5.0 ABI
+library that can be overridden by the environment variable MPI_ABI_LIBRARY.
+"""
+
+toolchain = {'name': 'GCC', 'version': '14.3.0'}
+
+builddependencies = [
+    ('CMake', '3.31.8'),
+    ('Python', '3.13.5'),
+    # Allows us to provide a default MPI backend (requires that MPICH was built with RPATH)
+    ('MPICH', '5.0.1', '-mpif'),
+]
+
+default_easyblock = 'CMakeMake'
+
+components = [
+    (name, version, {
+        'source_urls': ['https://github.com/ocaisa/trampi/archive'],
+        'sources': [{
+            'filename': '%(software_commit)s.tar.xz',
+            "git_config": {
+                "url": "https://github.com/ocaisa",
+                "repo_name": "trampi",
+                "commit": "%(software_commit)s",
+                "recursive": True,
+                },
+            }],
+        'start_dir': 'trampi/mpi-abi-stubs',
+        'preconfigopts': " && ".join([
+            # run trampi to create the header and .c files (note the next two lines are a single split string)
+            "(cd ../trampi && python -m trampi --header mpi-abi-stubs/mpi.h --stubs mpi-abi-stubs/mpistubs.c "
+            "--header-patch mpif/fortran/mpi.h.patch)",
+            # Provide a default MPI ABI library (awful but necessary escaping)
+            'export CFLAGS="$CFLAGS -DDEFAULT_MPI_ABI_LIBRARY=\'\\"$EBROOTMPICH/lib/libmpi_abi.so\\"\'"',
+            # manually set the default C and C++ compilers to what the toolchain uses
+            "sed -i 's/set(cc cc)/set(cc '$CC')/g' ../trampi/mpi-abi-stubs/CMakeLists.txt",
+            "sed -i 's/set(cc c++)/set(cc '$CXX')/g' ../trampi/mpi-abi-stubs/CMakeLists.txt",
+            # also take the chance to configure our MPI launcher wrappers
+            # (assumes the defaults are RPATH-ed executables which is true for MPICH and OpenMPI)
+            "sed -i 's|@DEFAULT_MPIRUN@|'$EBROOTMPICH/bin/mpirun'|' ../trampi/launcher_templates/mpirun.in",
+            "sed -i 's|@DEFAULT_MPIEXEC@|'$EBROOTMPICH/bin/mpiexec'|' ../trampi/launcher_templates/mpiexec.in",
+            "",
+        ]),
+        'configopts': '-DSOURCE_C="../trampi/mpi_proxy.c" -DSOURCE_H="../trampi/mpi.h"',
+    }),
+    ('mpif', 'ca7beb77', {
+        'source_urls': ['https://github.com/eschnett/mpif/archive'],
+        'sources': [{
+            'filename': '%(version)s.tar.xz',
+            "git_config": {
+                "url": "https://github.com/eschnett",
+                "repo_name": "mpif",
+                "commit": "%(version)s",
+                },
+            }],
+        'start_dir': 'mpif',
+        'preconfigopts': " && ".join([
+            # Force mpif to see our (just installed) trampi library first
+            'export LDFLAGS="-L%(installdir)s/lib"',
+            # Tweak the MPI compiler wrapper to grab the default compiler from the PATH (and based on the toolchain)
+            "sed -i 's|@CMAKE_Fortran_COMPILER@|'$F90'|' ../mpif/bin/mpifort.in",
+            "",
+        ]),
+        # Use our just installed MPI compiler as the C compiler
+        'configopts': '-DMPI_HOME="%(installdir)s" -DCMAKE_C_COMPILER="%(installdir)s"/bin/mpicc',
+    }),
+]
+
+# Also install our MPI launcher templates (which have been tweaked with in the trampi component to add a default)
+postinstallcmds = [
+    "cp %(builddir)s/trampi/launcher_templates/mpirun.in %(installdir)s/bin/mpirun",
+    "cp %(builddir)s/trampi/launcher_templates/mpiexec.in %(installdir)s/bin/mpiexec",
+]
+
+sanity_check_paths = {
+    'files': [
+        'bin/mpicc',
+        'bin/mpifort',
+        'bin/mpiexec',
+        'bin/mpirun',
+        f'lib/libmpi_abi.{SHLIB_EXT}',
+        'include/mpi.h',
+    ],
+    'dirs': [],
+}
+
+sanity_check_commands = [
+    "mpicc -show",
+    "mpifort -show",
+    "mpirun --help",
+    "mpiexec --help",
+]
+
+moduleclass = 'mpi'
