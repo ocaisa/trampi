@@ -1,0 +1,11 @@
+#!/bin/sh
+
+MPIEXEC="${MPI_ABI_LIBRARY_MPIEXEC:-@DEFAULT_MPIEXEC@}"
+
+if [ -z "$MPIEXEC" ]; then
+    echo "No MPI launcher configured." >&2
+    echo "Please set MPI_ABI_LIBRARY_MPIEXEC or configure a default." >&2
+    exit 1
+fi
+
+exec "$MPIEXEC" "$@"
