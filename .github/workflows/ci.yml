@@ -62,7 +62,13 @@ jobs:
         mkdir -p $EESSI_USER_INSTALL
         module load EESSI-extend
         unset EASYBUILD_DEBUG
-        eb --logtostdout --software-commit=$GITHUB_SHA easybuild/trampi-devel-GCC-14.3.0.eb --software-commit=$GITHUB_SHA
+        if ! eb --software-commit="$GITHUB_SHA" easybuild/trampi-devel-GCC-14.3.0.eb; then
+          echo
+          echo "EasyBuild failed. Last log:"
+          echo
+          cat "$(eb --last-log)"
+          exit 1
+        fi
         echo
         echo "Check we can load the module:"
         echo
