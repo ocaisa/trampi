@@ -37,6 +37,7 @@ jobs:
       shell: bash
       run: |
         export EESSI_PROJECT_INSTALL="/home/runner/work/mpich"
+        mkdir -p $EESSI_PROJECT_INSTALL
         module load EESSI-extend
         cd easybuild
         eb --robot MPICH-5.0.1-GCC-14.3.0-mpif.eb  MPICH-5.0.1-GCC-14.3.0.eb
@@ -45,6 +46,7 @@ jobs:
       run: |
         export EESSI_PROJECT_INSTALL="/home/runner/work/mpich"
         export EESSI_USER_INSTALL="/home/runner/work"
+        mkdir -p $EESSI_USER_INSTALL
         module load EESSI-extend
         unset EASYBUILD_DEBUG
         eb --logtostdout --software-commit=$GITHUB_SHA easybuild/trampi-devel-GCC-14.3.0.eb --software-commit=$GITHUB_SHA
