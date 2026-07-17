@@ -36,7 +36,7 @@ jobs:
     - name: Install MPICH
       shell: bash
       run: |
-        export EESSI_PROJECT_INSTALL="/home/runner/work/mpich"
+        export EESSI_PROJECT_INSTALL="/home/runner/work/mpich/eessi"
         mkdir -p $EESSI_PROJECT_INSTALL
         module load EESSI-extend
         cd easybuild
@@ -45,7 +45,7 @@ jobs:
       shell: bash
       run: |
         export EESSI_PROJECT_INSTALL="/home/runner/work/mpich"
-        export EESSI_USER_INSTALL="/home/runner/work"
+        export EESSI_USER_INSTALL="/home/runner/work/eessi"
         mkdir -p $EESSI_USER_INSTALL
         module load EESSI-extend
         unset EASYBUILD_DEBUG
