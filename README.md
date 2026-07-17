@@ -8,7 +8,6 @@
 
 The concept is heavily influenced by the design of [`MPItrampoline`](https://github.com/eschnett/MPItrampoline) and aided in implementation by AI (so probably not perfect but works with my testing to date).
 
-
 ## Installation
 
 Create and activate a Python virtual environment, then install the generator:
@@ -23,14 +22,39 @@ This installs the `trampi` command-line tool.
 
 Run the generator against the MPI ABI header and stub. For example:
 
+Basic usage:
+
 ```bash
-trampi --header mpi-abi-stubs/mpi.h --stubs mpi-abi-stubs/mpistubs.c
+trampi \
+    --header mpi-abi-stubs/mpi.h \
+    --stubs mpi-abi-stubs/mpistubs.c
 ```
+
+When additional declarations are required (for example `mpif` support), supply a
+unified diff that only modifies `mpi.h`:
+
+```bash
+trampi \
+    --header mpi-abi-stubs/mpi.h \
+    --header-patch mpif.patch \
+    --stubs mpi-abi-stubs/mpistubs.c
+```
+
+The patch is verified before being applied and must only contain changes to
+`mpi.h`. A patched copy of the header is written alongside the generated
+`mpi_proxy.c`.
+
+> **Note**
+>
+> Using `--header-patch` requires the standard Unix `patch` program to be
+> installed and available on your `PATH`.
 
 The generator will:
 
 * Parse and verify all MPI and PMPI declarations.
-* Generate `mpi_proxy.c` (and a patched `mpi.h` if using `mpif`).
+* Generate mpi_proxy.c. When `--header-patch` is supplied, a patched copy of
+  mpi.h is also written into the output directory for use when building the
+  trampoline.
 * Verify that every parsed function has a corresponding wrapper.
 
 A successful run reports the number of verified wrappers and writes `mpi_proxy.c` into the current directory.
@@ -53,7 +77,8 @@ Then build the trampoline implementation by overriding the source file:
 ln -s ../mpi_proxy.c  # Make a symlink to our generated code
 make SOURCE_C=/path/to/mpi_proxy.c SOURCE_H=/path/to/mpi.h
 ```
-(`SORUCE_H` is only required if using `mpif`)
+
+(`SOURCE_H` is only required if using `mpif`)
 
 A similar source override mechanism is supported by the CMake (`-DSOURCE_C=/path/to/mpi_proxy.c`, `-DSOURCE_H=/path/to/mpi.h`) and Meson (`-Dsource_c=mpi_proxy.c`, `-Dsource_h=mpi.h`) build systems.
 
