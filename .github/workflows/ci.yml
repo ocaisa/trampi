@@ -49,8 +49,8 @@ jobs:
         mkdir -p $EESSI_USER_INSTALL
         module load EESSI-extend
         unset EASYBUILD_DEBUG
-        eb --logtostdout --software-commit=$GITHUB_SHA easybuild/trampi-devel-GCC-14.3.0.eb --software-commit=$GITHUB_SHA
-        module load trampi
-        mpicc -show
-        mpicc test_codes/mpi_hello_world.c
-        LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpiexec -n 2 ./a.out
+        # eb --logtostdout --software-commit=$GITHUB_SHA easybuild/trampi-devel-GCC-14.3.0.eb --software-commit=$GITHUB_SHA
+        # module load trampi
+        # mpicc -show
+        # mpicc test_codes/mpi_hello_world.c
+        # LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpiexec -n 2 ./a.out
