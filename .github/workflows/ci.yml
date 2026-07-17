@@ -44,7 +44,7 @@ jobs:
     - name: Test trampi via EESSI-extend
       shell: bash
       run: |
-        export EESSI_PROJECT_INSTALL="/home/runner/work/mpich"
+        export EESSI_PROJECT_INSTALL="/home/runner/work/mpich/eessi"
         export EESSI_USER_INSTALL="/home/runner/work/eessi"
         mkdir -p $EESSI_USER_INSTALL
         module load EESSI-extend
