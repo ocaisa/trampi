@@ -73,6 +73,7 @@ init_mpi_proxy(void)
             "%s\n",
             dlerror());
         abort();
+    }
     
     if (verbose) {
         fprintf(stderr, "Opened backend MPI ABI library %s\n", lib);
