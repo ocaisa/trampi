@@ -95,7 +95,8 @@ init_mpi_proxy(void)
         out.write("    if (!sym) {\n")
         out.write("        if (verbose)\n")
         out.write(
-            f"            fprintf(stderr, " f'"TRAMPI:: Optional MPI ABI extension not available in runtime: {fn.name}\\n");\n'
+            f"            fprintf(stderr, "
+            f'"TRAMPI:: Optional MPI ABI extension not available in runtime: {fn.name}\\n");\n'
         )
         out.write("        ++missing_ext_symbols;\n")
         out.write("    }\n")

@@ -4,7 +4,7 @@
 
 ## Why and how
 
-`trampi` scratches an itch for those who heavily use RPATH linking. An MPI ABI is only useful if you can easily switch out the active MPI backend library at runtime. This is typically done via `LD_LIBRARY_PATH`, but when you use RPATH this avenue is not open. This tool provides an ABI-compatible library that be used for linking while still allowing the selection of the actual backend MPI library at runtime via the environment variable `TRAMPI_ABI_LIBRARY` (which points to an MPI 5.0 ABI compatible library).
+`trampi` scratches an itch for those who heavily use RPATH linking. An MPI ABI is only useful if you can easily switch out the active MPI backend library at runtime. This is typically done via `LD_LIBRARY_PATH`, but when you use RPATH this avenue is not open. This tool provides an ABI-compatible library that can be used for linking while still allowing for the selection of the actual backend MPI library at runtime via the environment variable `TRAMPI_ABI_LIBRARY` (which points to an MPI 5.0 ABI compatible library).
 
 The concept is heavily influenced by the design of [`MPItrampoline`](https://github.com/eschnett/MPItrampoline) and aided in implementation by AI (so probably not perfect but works with my testing to date).
 
