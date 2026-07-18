@@ -4,7 +4,7 @@
 
 ## Why and how
 
-`trampi` scratches an itch for those who heavily use RPATH linking. An MPI ABI is only useful if you can easily switch out the active MPI backend library at runtime. This is typically done via `LD_LIBRARY_PATH`, but when you use RPATH this avenue is not open. This tool provides an ABI-compatible library that be used for linking while still allowing the selection of the actual backend MPI library at runtime via the environment variable `MPI_ABI_LIBRARY` (which points to an MPI 5.0 ABI compatible library).
+`trampi` scratches an itch for those who heavily use RPATH linking. An MPI ABI is only useful if you can easily switch out the active MPI backend library at runtime. This is typically done via `LD_LIBRARY_PATH`, but when you use RPATH this avenue is not open. This tool provides an ABI-compatible library that be used for linking while still allowing the selection of the actual backend MPI library at runtime via the environment variable `TRAMPI_ABI_LIBRARY` (which points to an MPI 5.0 ABI compatible library).
 
 The concept is heavily influenced by the design of [`MPItrampoline`](https://github.com/eschnett/MPItrampoline) and aided in implementation by AI (so probably not perfect but works with my testing to date).
 
@@ -84,7 +84,7 @@ A similar source override mechanism is supported by the CMake (`-DSOURCE_C=/path
 
 ## Output
 
-The resulting shared library exports the same MPI/PMPI interface as the reference `mpi-abi-stubs` implementation (plus `mpif` if using this) while dispatching calls to a backend MPI library at runtime. When using the backend library you can use the environment variable `MPI_ABI_LIBRARY_VERBOSE` to inspect any missing symbols from there (these will only fail if they are actually used by the application).
+The resulting shared library exports the same MPI/PMPI interface as the reference `mpi-abi-stubs` implementation (plus `mpif` if using this) while dispatching calls to a backend MPI library at runtime. When using the backend library you can use the environment variable `TRAMPI_ABI_LIBRARY_VERBOSE` to inspect any missing symbols from there (these will only fail if they are actually used by the application).
 
 ## Selecting the backend MPI library
 
@@ -92,34 +92,34 @@ The generated trampoline loads the backend MPI library at runtime using `dlopen(
 
 The library to load is chosen as follows:
 
-1. If the environment variable `MPI_ABI_LIBRARY` is set, its value is used.
-2. Otherwise, if `DEFAULT_MPI_ABI_LIBRARY` was defined when `mpi_proxy.c` was compiled, that library is used.
+1. If the environment variable `TRAMPI_ABI_LIBRARY` is set, its value is used.
+2. Otherwise, if `DEFAULT_TRAMPI_ABI_LIBRARY` was defined when `mpi_proxy.c` was compiled, that library is used.
 3. If neither is available, initialisation fails with an error.
 
 For example:
 
 ```bash
-export MPI_ABI_LIBRARY=/path/to/libmpi.so
+export TRAMPI_ABI_LIBRARY=/path/to/libmpi.so
 ./my_mpi_application
 ```
 
 To embed a default backend library at compile time requires some awkward but necessary quoting since we don't control the build system. For the `Makefile`
 
 ```bash
-export CPPFLAGS='-DDEFAULT_MPI_ABI_LIBRARY=\"/path/to/libmpi_abi.so\"'
+export CPPFLAGS='-DDEFAULT_TRAMPI_ABI_LIBRARY=\"/path/to/libmpi_abi.so\"'
 make SOURCE_C=mpi_proxy.c
 ```
 
 or for CMake:
 
 ```bash
-cmake -B build --install-prefix=$PWD -DSOURCE_C=mpi_proxy.c -DCMAKE_C_FLAGS='"-DDEFAULT_MPI_ABI_LIBRARY=\"/path/to/libmpi_abi.so\""'
+cmake -B build --install-prefix=$PWD -DSOURCE_C=mpi_proxy.c -DCMAKE_C_FLAGS='"-DDEFAULT_TRAMPI_ABI_LIBRARY=\"/path/to/libmpi_abi.so\""'
 ```
 
 or for Meson:
 
 ```bash
-meson setup build -Dsource_c=mpi_proxy.c -Dc_args='-DDEFAULT_MPI_ABI_LIBRARY=\"/path/to/libmpi_abi.so\"'
+meson setup build -Dsource_c=mpi_proxy.c -Dc_args='-DDEFAULT_TRAMPI_ABI_LIBRARY=\"/path/to/libmpi_abi.so\"'
 ```
 
-This allows the trampoline to use a fixed backend by default while still permitting it to be overridden at runtime via `MPI_ABI_LIBRARY`.
+This allows the trampoline to use a fixed backend by default while still permitting it to be overridden at runtime via `TRAMPI_ABI_LIBRARY`.

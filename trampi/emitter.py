@@ -20,8 +20,8 @@ def inject_runtime_support(out, base_functions, extension_functions):
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifndef DEFAULT_MPI_ABI_LIBRARY
-#define DEFAULT_MPI_ABI_LIBRARY NULL
+#ifndef DEFAULT_TRAMPI_ABI_LIBRARY
+#define DEFAULT_TRAMPI_ABI_LIBRARY NULL
 #endif
 
 """)
@@ -53,16 +53,16 @@ init_mpi_proxy(void)
     int missing_symbols = 0;
     int missing_ext_symbols = 0;
 
-    verbose = getenv("MPI_ABI_LIBRARY_VERBOSE");
-    lib = getenv("MPI_ABI_LIBRARY");
+    verbose = getenv("TRAMPI_ABI_LIBRARY_VERBOSE");
+    lib = getenv("TRAMPI_ABI_LIBRARY");
 
     if (!lib)
-        lib = DEFAULT_MPI_ABI_LIBRARY;
+        lib = DEFAULT_TRAMPI_ABI_LIBRARY;
 
 
     if (!lib) {
         fprintf(stderr,
-            "No MPI backend configured. Please set the environment variable MPI_ABI_LIBRARY to an MPI ABI-compliant library\n");
+            "No MPI backend configured. Please set the environment variable TRAMPI_ABI_LIBRARY to an MPI ABI-compliant library\n");
         abort();
     }
 

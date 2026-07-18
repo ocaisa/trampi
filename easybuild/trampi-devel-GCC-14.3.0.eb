@@ -7,7 +7,7 @@ versionsuffix = '-%(software_commit)s'
 homepage = 'https://github.com/ocaisa/trampi'
 description = """
 A trampoline generator for the MPI 5.0 ABI which generates an MPI 5.0 ABI
-library that can be overridden by the environment variable MPI_ABI_LIBRARY.
+library that can be overridden by the environment variable TRAMPI_ABI_LIBRARY.
 """
 
 toolchain = {'name': 'GCC', 'version': '14.3.0'}
@@ -39,7 +39,7 @@ components = [
             "(cd ../trampi && python -m trampi --header mpi-abi-stubs/mpi.h --stubs mpi-abi-stubs/mpilib.c "
             "--header-patch mpif/fortran/mpi.h.patch)",
             # Provide a default MPI ABI library (awful but necessary escaping)
-            'export CFLAGS="$CFLAGS -DDEFAULT_MPI_ABI_LIBRARY=\'\\"$EBROOTMPICH/lib/libmpi_abi.so\\"\'"',
+            'export CFLAGS="$CFLAGS -DDEFAULT_TRAMPI_ABI_LIBRARY=\'\\"$EBROOTMPICH/lib/libmpi_abi.so\\"\'"',
             # manually set the default C and C++ compilers to what the toolchain uses
             "sed -i 's/set(cc cc)/set(cc '$CC')/g' ../trampi/mpi-abi-stubs/CMakeLists.txt",
             "sed -i 's/set(cc c++)/set(cc '$CXX')/g' ../trampi/mpi-abi-stubs/CMakeLists.txt",
@@ -53,6 +53,8 @@ components = [
         ]),
         'configopts': '-DSOURCE_C="../trampi/mpi_proxy.c" -DSOURCE_H="../trampi/mpi.h"',
     }),
+    # The commit used for mpif should match the one in the trampi git submodule
+    # (we have the sources already but it's not allowed to provide an empty sources list so we need to clone again)
     ('mpif', 'ca7beb77', {
         'source_urls': ['https://github.com/eschnett/mpif/archive'],
         'sources': [{

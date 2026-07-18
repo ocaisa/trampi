@@ -97,13 +97,13 @@ jobs:
         echo ""
         echo "Check what verbose output looks like:"
         echo ""
-        MPI_ABI_LIBRARY_VERBOSE=1 LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpirun -n 2 ./a.out
+        TRAMPI_ABI_LIBRARY_VERBOSE=1 LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpirun -n 2 ./a.out
         echo ""
         echo "Check what verbose output looks like when changing the backend ABI library:"
         echo "(must use C here as that is what the backend supports in this case)"
         echo ""
         mpicc test_codes/mpi_hello_world.c
         module load MPICH/5.0.1-GCC-14.3.0
-        export MPI_ABI_LIBRARY="$EBROOTMPICH/lib/libmpi_abi.so"
+        export TRAMPI_ABI_LIBRARY="$EBROOTMPICH/lib/libmpi_abi.so"
         module unload MPICH
-        MPI_ABI_LIBRARY_VERBOSE=1 LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpirun -n 2 ./a.out
+        TRAMPI_ABI_LIBRARY_VERBOSE=1 LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpirun -n 2 ./a.out
