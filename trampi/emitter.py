@@ -62,7 +62,7 @@ init_mpi_proxy(void)
 
     if (!lib) {
         fprintf(stderr,
-            "No MPI backend configured. Please set the environment variable TRAMPI_ABI_LIBRARY to an MPI ABI-compliant library\n");
+            "TRAMPI:: No MPI backend configured. Please set the environment variable TRAMPI_ABI_LIBRARY to an MPI ABI-compliant library\n");
         abort();
     }
 
@@ -70,13 +70,13 @@ init_mpi_proxy(void)
 
     if (!handle) {
         fprintf(stderr,
-            "%s\n",
+            "TRAMPI: %s\n",
             dlerror());
         abort();
     }
     
     if (verbose) {
-        fprintf(stderr, "Opened backend MPI ABI library %s\n", lib);
+        fprintf(stderr, "TRAMPI:: Opened backend MPI ABI library %s\n", lib);
     }
 
 """)
@@ -85,7 +85,7 @@ init_mpi_proxy(void)
         out.write(f'    sym = dlsym(handle, "{fn.name}");\n')
         out.write("    if (!sym) {\n")
         out.write("        if (verbose)\n")
-        out.write(f'            fprintf(stderr, "Unable to resolve {fn.name}\\n");\n')
+        out.write(f'            fprintf(stderr, "TRAMPI:: Unable to resolve {fn.name}\\n");\n')
         out.write("        ++missing_symbols;\n")
         out.write("    }\n")
         out.write(f"    *(void **)(&backend_{fn.name}) = sym;\n")
@@ -95,7 +95,7 @@ init_mpi_proxy(void)
         out.write("    if (!sym) {\n")
         out.write("        if (verbose)\n")
         out.write(
-            f"            fprintf(stderr, " f'"Optional MPI ABI extension not available in runtime: {fn.name}\\n");\n'
+            f"            fprintf(stderr, " f'"TRAMPI:: Optional MPI ABI extension not available in runtime: {fn.name}\\n");\n'
         )
         out.write("        ++missing_ext_symbols;\n")
         out.write("    }\n")
@@ -104,14 +104,14 @@ init_mpi_proxy(void)
     out.write("""
     if (missing_symbols && verbose) {
     fprintf(stderr,
-            "Warning: %d required MPI ABI symbols could not be resolved. "
+            "TRAMPI:: Warning: %d required MPI ABI symbols could not be resolved. "
             "Calls to these functions will fail.\\n",
             missing_symbols);
     }
 
     if (missing_ext_symbols && verbose) {
         fprintf(stderr,
-                "Warning: %d optional MPI ABI extension symbols could not be resolved. "
+                "TRAMPI:: Warning: %d optional MPI ABI extension symbols could not be resolved. "
                 "This runtime is not patched for these (optional) MPI ABI extensions. "
                 "Calls to these functions will fail.\\n",
                 missing_ext_symbols);
