@@ -3,8 +3,8 @@
 MPIEXEC="${TRAMPI_ABI_LIBRARY_MPIEXEC:-@DEFAULT_MPIEXEC@}"
 
 if [ -z "$MPIEXEC" ]; then
-    echo "No MPI launcher configured." >&2
-    echo "Please set TRAMPI_ABI_LIBRARY_MPIEXEC or configure a default." >&2
+    echo "TRAMPI:: No MPI launcher configured." >&2
+    echo "TRAMPI:: Please set TRAMPI_ABI_LIBRARY_MPIEXEC or configure a default." >&2
     exit 1
 fi
 
