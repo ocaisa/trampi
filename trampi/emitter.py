@@ -4,7 +4,7 @@ from .verify import VARIADIC_FUNCTIONS
 
 def read_mpi_stubs(source):
     """
-    Return mpistubs.c as a list of lines.
+    Return mpilib.c as a list of lines.
 
     The file is read verbatim.
     """
@@ -154,7 +154,7 @@ def emit_wrapper(out, fn):
 def rewrite_mpi_stubs(lines, functions):
     """
     Rewrite the bodies of MPI/PMPI functions while preserving the rest
-    of mpistubs.c unchanged.
+    of mpilib.c unchanged.
     """
 
     lookup = {fn.name: fn for fn in functions}
@@ -269,7 +269,7 @@ def emit_proxy(
                 out.write("\n")
 
         #
-        # Emit wrappers that are not yet present in mpistubs.c.
+        # Emit wrappers that are not yet present in mpilib.c.
         #
         if extension_functions:
 

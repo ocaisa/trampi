@@ -101,7 +101,7 @@ def main():
     parser.add_argument(
         "--stubs",
         required=True,
-        help="Path to mpistubs.c",
+        help="Path to mpilib.c",
     )
 
     parser.add_argument(

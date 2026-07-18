@@ -1,6 +1,6 @@
 # `trampi`
 
-`trampi` generates a trampoline implementation of the MPI ABI from an `mpi.h` header file and an `mpistubs.c` file (which are expected to come from the [`mpi-abi-stubs` reference for the MPI standard ABI](https://github.com/mpi-forum/mpi-abi-stubs)). It also has (optional) support for [`mpif`](https://github.com/eschnett/mpif). The generated `mpi_proxy.c` (and potentially a patched `mpi.h` if using `mpif`) forwards all supported MPI and PMPI entry points to a backend MPI library that is selected at runtime. The library relies on `mpi-abi-stubs` to provide a build system.
+`trampi` generates a trampoline implementation of the MPI ABI from an `mpi.h` header file and an `mpilib.c` file (which are expected to come from the [`mpi-abi-stubs` reference for the MPI standard ABI](https://github.com/mpi-forum/mpi-abi-stubs)). It also has (optional) support for [`mpif`](https://github.com/eschnett/mpif). The generated `mpi_proxy.c` (and potentially a patched `mpi.h` if using `mpif`) forwards all supported MPI and PMPI entry points to a backend MPI library that is selected at runtime. The library relies on `mpi-abi-stubs` to provide a build system.
 
 ## Why and how
 
@@ -27,7 +27,7 @@ Basic usage:
 ```bash
 trampi \
     --header mpi-abi-stubs/mpi.h \
-    --stubs mpi-abi-stubs/mpistubs.c
+    --stubs mpi-abi-stubs/mpilib.c
 ```
 
 When additional declarations are required (for example `mpif` support), supply a
@@ -37,7 +37,7 @@ unified diff that only modifies `mpi.h`:
 trampi \
     --header mpi-abi-stubs/mpi.h \
     --header-patch mpif.patch \
-    --stubs mpi-abi-stubs/mpistubs.c
+    --stubs mpi-abi-stubs/mpilib.c
 ```
 
 The patch is verified before being applied and must only contain changes to
