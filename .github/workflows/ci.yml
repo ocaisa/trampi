@@ -30,9 +30,10 @@ jobs:
       uses: actions/cache@v5
       with:
         path: /home/runner/work/mpich/eessi
-        key: mpich-gcc-${{ matrix.os }}-5.0.1-v3
+        key: mpich-gcc-${{ matrix.os }}-5.0.1-v3-${{ github.sha }}
+        # 2. This prefix pulls your existing cache as a starting point at the beginning
         restore-keys: |
-          mpich-gcc-${{ matrix.os }}-5.0.1-v3
+          mpich-gcc-ubuntu-24.04-5.0.1-v3
     - name: Install MPICH
       shell: bash
       run: |
