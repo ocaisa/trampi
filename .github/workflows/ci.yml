@@ -88,7 +88,7 @@ jobs:
         echo "Check the mpifort compiler works:"
         echo ""
         mpifort -show
-        mpifort test_codes/mpi_hello_world.f90
+        mpifort -Werror=attributes -Werror=cast-align test_codes/mpi_hello_world.f90
         ldd ./a.out
         echo ""
         echo "Check we can also run fortran codes:"

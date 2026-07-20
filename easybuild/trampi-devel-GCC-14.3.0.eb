@@ -75,7 +75,7 @@ components = [
         ]),
         # Use our just installed MPI compiler as the C compiler
         'configopts': '-DMPI_HOME="%(installdir)s" -DCMAKE_C_COMPILER="%(installdir)s"/bin/mpicc',
-        # And make sure it sees our custom mpi header is preferred during the build
+        # And make sure it sees our custom mpi header is preferred during the build (not the one from MPICH)
         'prebuildopts': 'export CPATH="%(installdir)s/include:${CPATH}" &&',
     }),
 ]
