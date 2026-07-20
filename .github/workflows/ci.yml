@@ -32,8 +32,7 @@ jobs:
         path: /home/runner/work/mpich/eessi
         key: mpich-gcc-${{ matrix.os }}-5.0.1-v3-${{ github.sha }}
         # 2. This prefix pulls your existing cache as a starting point at the beginning
-        restore-keys: |
-          mpich-gcc-ubuntu-24.04-5.0.1-v3
+        restore-keys: mpich-gcc-${{ matrix.os }}-5.0.1-v3
     - name: Install MPICH
       shell: bash
       run: |
@@ -80,6 +79,9 @@ jobs:
         echo ""
         mpicc -show
         mpicc test_codes/mpi_hello_world.c
+        echo ""
+        echo "Check how the executable is linked:"
+        echo ""
         ldd ./a.out
         echo ""
         echo "Check we can also run things:"
@@ -90,6 +92,9 @@ jobs:
         echo ""
         mpifort -show
         mpifort -Werror=attributes -Werror=cast-align test_codes/mpi_hello_world.f90
+        echo ""
+        echo "Check how the executable is linked:"
+        echo ""
         ldd ./a.out
         echo ""
         echo "Check we can also run fortran codes:"
