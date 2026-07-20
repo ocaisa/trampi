@@ -16,6 +16,10 @@ def read_mpi_stubs(source):
 def inject_runtime_support(out, base_functions, extension_functions):
     all_functions = base_functions + extension_functions
     out.write("""
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -72,7 +76,7 @@ init_mpi_proxy(void)
         abort();
     }
 
-#if defined(__GLIBC__)
+#if defined(__GLIBC__) && defined(_GNU_SOURCE)
     if (!force_dlopen || force_dlopen[0] == '\0') {
         if (verbose) {
             fprintf(stderr,
