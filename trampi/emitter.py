@@ -16,10 +16,6 @@ def read_mpi_stubs(source):
 def inject_runtime_support(out, base_functions, extension_functions):
     all_functions = base_functions + extension_functions
     out.write("""
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -293,6 +289,10 @@ def emit_proxy(
         raise RuntimeError("No #include directives found.")
 
     with open(output, "w", encoding="utf8") as out:
+        # We need to request GNU extensions as early as possible
+        out.write("#ifndef _GNU_SOURCE\n")
+        out.write("#define _GNU_SOURCE\n")
+        out.write("#endif\n\n")
 
         for i, line in enumerate(rewritten):
 
