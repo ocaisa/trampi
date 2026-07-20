@@ -20,6 +20,10 @@ def inject_runtime_support(out, base_functions, extension_functions):
 #include <stdlib.h>
 #include <stdio.h>
 
+#if defined(__GLIBC__) && !__GLIBC_PREREQ(2,34)
+#error "TRAMPI requires glibc >= 2.34 otherwise it would require linking with -ldl. glibc < 2.34 is intentionally unsupported."
+#endif
+
 #ifndef DEFAULT_TRAMPI_ABI_LIBRARY
 #define DEFAULT_TRAMPI_ABI_LIBRARY NULL
 #endif
@@ -48,6 +52,7 @@ init_mpi_proxy(void)
 {
     const char *lib;
     const char *verbose;
+    const char *force_dlopen;
     void *handle;
     void *sym;
     int missing_symbols = 0;
@@ -55,6 +60,7 @@ init_mpi_proxy(void)
 
     verbose = getenv("TRAMPI_ABI_LIBRARY_VERBOSE");
     lib = getenv("TRAMPI_ABI_LIBRARY");
+    force_dlopen = getenv("TRAMPI_FORCE_DLOPEN");
 
     if (!lib)
         lib = DEFAULT_TRAMPI_ABI_LIBRARY;
@@ -66,17 +72,41 @@ init_mpi_proxy(void)
         abort();
     }
 
+#if defined(__GLIBC__)
+    if (!force_dlopen || force_dlopen[0] == '\0') {
+        if (verbose) {
+            fprintf(stderr,
+                    "TRAMPI:: Loading MPI backend in an isolated linker namespace via dlmopen().\n");
+        }
+        handle = dlmopen(LM_ID_NEWLM, lib, RTLD_NOW | RTLD_LOCAL);
+    } else {
+        if (verbose) {
+            fprintf(stderr,
+                    "TRAMPI:: TRAMPI_FORCE_DLOPEN is set; using dlopen().\n");
+        }
+        handle = dlopen(lib, RTLD_NOW | RTLD_GLOBAL);
+    }
+#else
+    if (verbose && force_dlopen) {
+        fprintf(stderr,
+                "TRAMPI:: TRAMPI_FORCE_DLOPEN ignored (dlmopen unavailable).\n");
+    }
+    if (verbose) {
+        fprintf(stderr,
+                "TRAMPI:: Loading MPI backend in an isolated linker namespace via dlopen().\n");
+    }
     handle = dlopen(lib, RTLD_NOW | RTLD_GLOBAL);
+#endif
 
     if (!handle) {
         fprintf(stderr,
-            "TRAMPI: %s\n",
-            dlerror());
+                "TRAMPI:: %s\n",
+                dlerror());
         abort();
     }
     
     if (verbose) {
-        fprintf(stderr, "TRAMPI:: Opened backend MPI ABI library %s\n", lib);
+        fprintf(stderr, "TRAMPI:: Loaded backend MPI ABI library %s\n", lib);
     }
 
 """)
