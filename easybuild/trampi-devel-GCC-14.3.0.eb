@@ -69,14 +69,14 @@ components = [
         'preconfigopts': " && ".join([
             # Force mpif to see our (just installed) trampi library first
             'export LDFLAGS="-L%(installdir)s/lib"',
-            # And make sure it sees our custom mpi header
-            'export CPATH="%(installdir)s/include:${CPATH}"',
             # Tweak the MPI compiler wrapper to grab the default compiler from the PATH (and based on the toolchain)
             "sed -i 's|@CMAKE_Fortran_COMPILER@|${TRAMPI_FC:-'$FC'}|' ../mpif/bin/mpifort.in",
             "",
         ]),
         # Use our just installed MPI compiler as the C compiler
         'configopts': '-DMPI_HOME="%(installdir)s" -DCMAKE_C_COMPILER="%(installdir)s"/bin/mpicc',
+        # And make sure it sees our custom mpi header is preferred during the build
+        'prebuildopts': 'export CPATH="%(installdir)s/include:${CPATH}" &&',
     }),
 ]
 
