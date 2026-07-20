@@ -24,7 +24,7 @@ def inject_runtime_support(out, base_functions, extension_functions):
  * entire translation unit. This avoids changing the feature set exposed by
  * other system headers such as mpi.h.
  */
-#if defined(__GLIBC__) && !defined(__USE_GNU)
+#if defined(__GLIBC__) && !defined(LM_ID_NEWLM)
 typedef long int Lmid_t;
 #define LM_ID_NEWLM ((Lmid_t)-1)
 extern void *dlmopen(Lmid_t nsid, const char *filename, int flags);
@@ -82,7 +82,7 @@ init_mpi_proxy(void)
         abort();
     }
 
-#if defined(__GLIBC__) && defined(_GNU_SOURCE)
+#if defined(__GLIBC__)
     if (!force_dlopen || force_dlopen[0] == '\0') {
         if (verbose) {
             fprintf(stderr,
