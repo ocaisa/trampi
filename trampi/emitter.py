@@ -299,8 +299,7 @@ def emit_proxy(
         raise RuntimeError("No #include directives found.")
 
     with open(output, "w", encoding="utf8") as out:
-
-       for i, line in enumerate(rewritten):
+        for i, line in enumerate(rewritten):
 
             out.write(line)
 
