@@ -20,6 +20,16 @@ def inject_runtime_support(out, base_functions, extension_functions):
 #include <stdlib.h>
 #include <stdio.h>
 
+/* Declare the GNU dlmopen() interface without enabling _GNU_SOURCE for the
+ * entire translation unit. This avoids changing the feature set exposed by
+ * other system headers such as mpi.h.
+ */
+#if defined(__GLIBC__) && !defined(__USE_GNU)
+typedef long int Lmid_t;
+#define LM_ID_NEWLM ((Lmid_t)-1)
+extern void *dlmopen(Lmid_t nsid, const char *filename, int flags);
+#endif
+
 #if defined(__GLIBC__) && !__GLIBC_PREREQ(2,34)
 #error "TRAMPI requires glibc >= 2.34 otherwise it would require linking with -ldl. glibc < 2.34 is intentionally unsupported."
 #endif
@@ -289,12 +299,8 @@ def emit_proxy(
         raise RuntimeError("No #include directives found.")
 
     with open(output, "w", encoding="utf8") as out:
-        # We need to request GNU extensions as early as possible
-        out.write("#ifndef _GNU_SOURCE\n")
-        out.write("#define _GNU_SOURCE\n")
-        out.write("#endif\n\n")
 
-        for i, line in enumerate(rewritten):
+       for i, line in enumerate(rewritten):
 
             out.write(line)
 
