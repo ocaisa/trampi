@@ -1,5 +1,5 @@
 program helloworld
-  use mpi
+  use mpi_f08
   implicit none
   integer :: rank, comsize, ierr
   

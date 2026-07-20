@@ -11,10 +11,6 @@ library that can be overridden by the environment variable TRAMPI_ABI_LIBRARY.
 """
 
 toolchain = {'name': 'GCC', 'version': '14.3.0'}
-# mpifc aligns explicitly to 16 which can be a problem on some archs
-toolchainopts = {
-    'extra_fflags': '-fno-align-commons',
-}
 
 builddependencies = [
     ('CMake', '3.31.8'),
