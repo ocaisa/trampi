@@ -71,6 +71,8 @@ components = [
             'export LDFLAGS="-L%(installdir)s/lib"',
             # Tweak the MPI compiler wrapper to grab the default compiler from the PATH (and based on the toolchain)
             "sed -i 's|@CMAKE_Fortran_COMPILER@|${TRAMPI_FC:-'$FC'}|' ../mpif/bin/mpifort.in",
+            # Don't hardcode the alignment, the "best" choice is arch specific
+            "sed -i 's|16|__BIGGEST_ALIGNMENT__|g' ../mpif/mpif/src/mpif_constants.c",
             "",
         ]),
         # Use our just installed MPI compiler as the C compiler
