@@ -91,7 +91,8 @@ jobs:
         echo "Check the mpifort compiler works:"
         echo ""
         mpifort -show
-        mpifort -fno-align-commons test_codes/mpi_hello_world.f90
+        # mpifort -fno-align-commons test_codes/mpi_hello_world.f90
+        mpifort test_codes/mpi_hello_world.f90
         echo ""
         echo "Check how the executable is linked:"
         echo ""
