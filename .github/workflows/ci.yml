@@ -45,27 +45,36 @@ jobs:
         
         # Let's store if anything is installed
         if eb --missing MPICH-5.0.1-GCC-14.3.0* | grep -q "No missing modules"; then
-          echo "deps_installed=false" >> "$GITHUB_OUTPUT"
+          echo "cache_changed=false" >> "$GITHUB_OUTPUT"
+          echo ""
+          echo "No need to run EasyBuild installation steps"
         else
-          echo "deps_installed=true" >> "$GITHUB_OUTPUT"
+          echo ""
+          echo "Installing missing MPICH installations via EasyBuild"
+          echo ""
+
+          # Grab the source files first 
+          eb --fetch MPICH-5.0.1-GCC-14.3.0.eb
+          
+          # Then run the two builds in parallel
+          # (with and without mpif)
+          eb --robot MPICH-5.0.1-GCC-14.3.0-mpif.eb &
+          pid1=$!
+          eb --robot MPICH-5.0.1-GCC-14.3.0.eb &
+          pid2=$!
+          wait $pid1 || exit 1
+          wait $pid2 || exit 1
+          # If we got to here our cache has changed
+          echo "cache_changed=true" >> "$GITHUB_OUTPUT"
+          echo ""
+          echo "Cache will be updated"
         fi
 
-        # Grab the source files first
-        eb --fetch MPICH-5.0.1-GCC-14.3.0.eb
-        
-        # Then run the two builds in parallel
-        # (with and without mpif)
-        eb --robot MPICH-5.0.1-GCC-14.3.0-mpif.eb &
-        pid1=$!
-        eb --robot MPICH-5.0.1-GCC-14.3.0.eb
-        pid2=$!
-        wait $pid1
-        wait $pid2
     - name: Save MPICH/GCC cache
       if: |
         github.ref == 'refs/heads/main' &&
         success() &&
-        steps.mpich-needed.outputs.deps_installed == 'true'
+        steps.mpich-needed.outputs.cache_changed == 'true'
       uses: actions/cache/save@v4
       with:
         path: /home/runner/work/mpich/eessi
