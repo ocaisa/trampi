@@ -140,7 +140,10 @@ jobs:
         echo ""
         mpicc -Werror -Wl,--fatal-warnings test_codes/mpi_hello_world.c
         module load MPICH/5.0.1-GCC-14.3.0
+        echo ""
+        echo "Exporting TRAMPI_ABI_LIBRARY=$EBROOTMPICH/lib/libmpi_abi.so"
         export TRAMPI_ABI_LIBRARY="$EBROOTMPICH/lib/libmpi_abi.so"
+        echo ""
         module unload MPICH
         echo ""
         echo "Running:"
