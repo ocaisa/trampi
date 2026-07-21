@@ -91,7 +91,6 @@ jobs:
         echo "Check the mpifort compiler works (with '-Werror -Wl,--fatal-warnings' ):"
         echo ""
         mpifort -show test_codes/mpi_hello_world.f90
-        # mpifort -fno-align-commons test_codes/mpi_hello_world.f90
         mpifort -Werror -Wl,--fatal-warnings test_codes/mpi_hello_world.f90
         echo ""
         echo "Check how the executable is linked:"
