@@ -25,15 +25,16 @@ jobs:
       uses: eessi/github-action-eessi@v3
       with:
         eessi_stack_version: '2025.06'
-    - name: Cache MPICH/GCC install
+    - name: Restore MPICH/GCC cache
       id: cache-mpich-gcc
-      uses: actions/cache@v5
+      uses: actions/cache/restore@v4
       with:
         path: /home/runner/work/mpich/eessi
         key: mpich-gcc-${{ matrix.os }}-5.0.1-v3-${{ github.sha }}
-        # 2. This prefix pulls your existing cache as a starting point at the beginning
-        restore-keys: mpich-gcc-${{ matrix.os }}-5.0.1-v3
+        restore-keys: |
+          mpich-gcc-${{ matrix.os }}-5.0.1-v3-
     - name: Install MPICH
+      id: mpich-needed
       shell: bash
       run: |
         export EESSI_PROJECT_INSTALL="/home/runner/work/mpich/eessi"
@@ -42,6 +43,13 @@ jobs:
         module load EESSI-extend
         cd easybuild
         
+        # Let's store if anything is installed
+        if eb --missing MPICH-5.0.1-GCC-14.3.0* | grep -q "No missing modules"; then
+          echo "deps_installed=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "deps_installed=true" >> "$GITHUB_OUTPUT"
+        fi
+
         # Grab the source files first
         eb --fetch MPICH-5.0.1-GCC-14.3.0.eb
         
@@ -53,7 +61,15 @@ jobs:
         pid2=$!
         wait $pid1
         wait $pid2
-
+    - name: Save MPICH/GCC cache
+      if: |
+        github.ref == 'refs/heads/main' &&
+        success() &&
+        steps.mpich-needed.outputs.deps_installed == 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: /home/runner/work/mpich/eessi
+        key: mpich-gcc-${{ matrix.os }}-5.0.1-v3-${{ github.sha }}
     - name: Test trampi via EESSI-extend
       shell: bash
       run: |
