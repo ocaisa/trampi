@@ -44,6 +44,12 @@ jobs:
         cd easybuild
         
         # Let's store if anything is installed
+        echo ""
+        echo "DEBUGGING: eb --missing MPICH-5.0.1-GCC-14.3.0*"
+        eb --missing MPICH-5.0.1-GCC-14.3.0*
+        eb --missing MPICH-5.0.1-GCC-14.3.0* | grep "No missing modules"
+        echo $?
+        echo ""
         if eb --missing MPICH-5.0.1-GCC-14.3.0* | grep -q "No missing modules"; then
           echo "cache_changed=false" >> "$GITHUB_OUTPUT"
           echo ""
