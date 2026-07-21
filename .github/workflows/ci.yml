@@ -50,7 +50,7 @@ jobs:
         echo "$EB_MISSING" | grep "No missing modules"
         echo $?
         echo ""
-        if echo "$OUTPUT" | grep -q "No missing modules"; then
+        if echo "$EB_MISSING" | grep -q "No missing modules"; then
           echo "cache_changed=false" >> "$GITHUB_OUTPUT"
           echo ""
           echo "No need to run EasyBuild installation steps"
