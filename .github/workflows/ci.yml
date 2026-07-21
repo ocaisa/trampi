@@ -27,7 +27,7 @@ jobs:
         eessi_stack_version: '2025.06'
     - name: Restore MPICH/GCC cache
       id: cache-mpich-gcc
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       with:
         path: /home/runner/work/mpich/eessi
         key: mpich-gcc-${{ matrix.os }}-5.0.1-v3-${{ github.sha }}
@@ -46,11 +46,11 @@ jobs:
         # Let's store if anything is installed
         echo ""
         echo "DEBUGGING: eb --missing MPICH-5.0.1-GCC-14.3.0*"
-        eb --missing MPICH-5.0.1-GCC-14.3.0*
-        eb --missing MPICH-5.0.1-GCC-14.3.0* | grep "No missing modules"
+        EB_MISSING=$(eb --missing MPICH-5.0.1-GCC-14.3.0*)
+        echo "$EB_MISSING" | grep "No missing modules"
         echo $?
         echo ""
-        if eb --missing MPICH-5.0.1-GCC-14.3.0* | grep -q "No missing modules"; then
+        if echo "$OUTPUT" | grep -q "No missing modules"; then
           echo "cache_changed=false" >> "$GITHUB_OUTPUT"
           echo ""
           echo "No need to run EasyBuild installation steps"
@@ -81,7 +81,7 @@ jobs:
         github.ref == 'refs/heads/main' &&
         success() &&
         steps.mpich-needed.outputs.cache_changed == 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v6
       with:
         path: /home/runner/work/mpich/eessi
         key: mpich-gcc-${{ matrix.os }}-5.0.1-v3-${{ github.sha }}
