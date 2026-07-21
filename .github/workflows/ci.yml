@@ -78,7 +78,7 @@ jobs:
         echo "Check the mpicc compiler works:"
         echo ""
         mpicc -show
-        mpicc test_codes/mpi_hello_world.c
+        mpicc -Werror -Wl,--fatal-warnings test_codes/mpi_hello_world.c
         echo ""
         echo "Check how the executable is linked:"
         echo ""
@@ -88,11 +88,11 @@ jobs:
         echo ""
         LD_LIBRARY_PATH=$EBROOTTRAMPI/lib mpiexec -n 2 ./a.out
         echo ""
-        echo "Check the mpifort compiler works (with -Werror):"
+        echo "Check the mpifort compiler works (with '-Werror -Wl,--fatal-warnings' ):"
         echo ""
-        mpifort -show -Werror test_codes/mpi_hello_world.f90
+        mpifort -show test_codes/mpi_hello_world.f90
         # mpifort -fno-align-commons test_codes/mpi_hello_world.f90
-        mpifort -Werror test_codes/mpi_hello_world.f90
+        mpifort -Werror -Wl,--fatal-warnings test_codes/mpi_hello_world.f90
         echo ""
         echo "Check how the executable is linked:"
         echo ""
@@ -109,7 +109,7 @@ jobs:
         echo "Check what verbose output looks like when changing the backend ABI library:"
         echo "(must use C here as that is what the backend supports in this case)"
         echo ""
-        mpicc -Werror test_codes/mpi_hello_world.c
+        mpicc -Werror -Wl,--fatal-warnings test_codes/mpi_hello_world.c
         module load MPICH/5.0.1-GCC-14.3.0
         export TRAMPI_ABI_LIBRARY="$EBROOTMPICH/lib/libmpi_abi.so"
         module unload MPICH
