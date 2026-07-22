@@ -20,19 +20,21 @@ builddependencies = [
 ]
 
 default_easyblock = 'CMakeMake'
+default_component_specs = {
+    'source_urls': ['https://github.com/ocaisa/trampi/archive'],
+    'sources': [{
+        'filename': '%(software_commit)s.tar.xz',
+        "git_config": {
+            "url": "https://github.com/ocaisa",
+            "repo_name": "trampi",
+            "commit": "%(software_commit)s",
+            "recursive": True,
+            },
+    }],
+}
 
 components = [
     (name, version, {
-        'source_urls': ['https://github.com/ocaisa/trampi/archive'],
-        'sources': [{
-            'filename': '%(software_commit)s.tar.xz',
-            "git_config": {
-                "url": "https://github.com/ocaisa",
-                "repo_name": "trampi",
-                "commit": "%(software_commit)s",
-                "recursive": True,
-                },
-            }],
         'start_dir': 'trampi/mpi-abi-stubs',
         'preconfigopts': " && ".join([
             # run trampi to create the header and .c files (note the next two lines are a single split string)
@@ -53,27 +55,16 @@ components = [
         ]),
         'configopts': '-DSOURCE_C="../trampi/mpi_proxy.c" -DSOURCE_H="../trampi/mpi.h"',
     }),
-    # The commit used for mpif should match the one in the trampi git submodule
-    # (we have the sources already but it's not allowed to provide an empty sources list so we need to clone again)
-    ('mpif', 'ca7beb77', {
-        'source_urls': ['https://github.com/eschnett/mpif/archive'],
-        'sources': [{
-            'filename': '%(version)s.tar.xz',
-            "git_config": {
-                "url": "https://github.com/eschnett",
-                "repo_name": "mpif",
-                "commit": "%(version)s",
-                },
-            }],
-        'start_dir': 'mpif',
+    ('mpif', 'submodule', {
+        'start_dir': 'trampi/mpif',
         'preconfigopts': " && ".join([
             # Force mpif to see our (just installed) trampi library first
             'export LDFLAGS="-L%(installdir)s/lib"',
             # Tweak the MPI compiler wrapper to grab the default compiler from the PATH (and based on the toolchain)
-            "sed -i 's|@CMAKE_Fortran_COMPILER@|${TRAMPI_FC:-'$FC'}|' ../mpif/bin/mpifort.in",
+            "sed -i 's|@CMAKE_Fortran_COMPILER@|${TRAMPI_FC:-'$FC'}|' ../trampi/mpif/bin/mpifort.in",
             # The hardcoded 16-byte alignment causes linker warnings on modern architectures, bump to __BIGGEST_ALIGNMENT__
             # (seems that more recent compilers are more aggressive here on CPUs with vector instructions)
-            "sed -i 's|16|__BIGGEST_ALIGNMENT__|g' ../mpif/src/mpif_constants.c",
+            "sed -i 's|16|__BIGGEST_ALIGNMENT__|g' ../trampi/mpif/src/mpif_constants.c",
             "",
         ]),
         # Use our just installed MPI compiler as the C compiler
